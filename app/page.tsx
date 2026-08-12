@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ElementType, KeyboardEvent, ReactNode } from "react";
+
 import {
   Bot,
   MessageSquare,
@@ -13,28 +15,44 @@ import {
   Brain,
   Wrench,
   Settings,
+  Plus,
+  Search,
   Mic,
   Paperclip,
   Send,
   CheckCircle2,
-  Clock,
+  Circle,
+  Clock3,
   Zap,
-  Plus,
-  Search,
-  Activity,
   Code2,
-  ShieldCheck,
-  Database,
   Play,
+  Database,
+  Activity,
 } from "lucide-react";
+
+import DevPilotIntro from "@/components/layout/intro/DevPilotIntro";
+
+type PageName =
+  | "Chat"
+  | "Dashboard"
+  | "Agents"
+  | "Browser"
+  | "Terminal"
+  | "Files"
+  | "Documents"
+  | "Memory"
+  | "Tools"
+  | "Settings";
 
 type Message = {
   role: "user" | "assistant";
   text: string;
-  time: string;
 };
 
-const navigation = [
+const menuItems: {
+  name: PageName;
+  icon: ElementType;
+}[] = [
   { name: "Chat", icon: MessageSquare },
   { name: "Dashboard", icon: LayoutDashboard },
   { name: "Agents", icon: Users },
@@ -47,469 +65,561 @@ const navigation = [
   { name: "Settings", icon: Settings },
 ];
 
-const agents = [
+const agentList = [
   {
     name: "Coder Agent",
-    description: "Writes and understands code",
+    description: "Write, explain and debug code",
     icon: Code2,
   },
   {
     name: "Browser Agent",
-    description: "Browses and researches the web",
+    description: "Browse and research the web",
     icon: Globe,
   },
   {
     name: "Research Agent",
-    description: "Researches information",
-    icon: Brain,
+    description: "Research and summarize information",
+    icon: Search,
   },
   {
     name: "Terminal Agent",
-    description: "Runs terminal commands",
+    description: "Execute terminal commands",
     icon: Terminal,
   },
   {
     name: "Memory Agent",
-    description: "Manages your memories",
-    icon: Database,
+    description: "Store and retrieve context",
+    icon: Brain,
+  },
+  {
+    name: "Automation Agent",
+    description: "Automate repetitive tasks",
+    icon: Zap,
   },
 ];
 
 export default function Home() {
-  const [active, setActive] = useState("Chat");
-  const [input, setInput] = useState("");
+  const [showIntro, setShowIntro] = useState(true);
+  const [activePage, setActivePage] = useState<PageName>("Chat");
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       text:
-        "Hello! 👋\n\nI'm DevPilot AI, your personal AI engineering assistant.\n\nI can help you code, research, browse the web, work with files, execute tasks and automate your workflow.\n\nWhat would you like me to do?",
-      time: "10:30 AM",
+        "Hello! 👋\n\nI'm DevPilot AI, your personal AI engineering assistant.\n\nI can help you code, debug, research, automate tasks, browse the web and work with your projects.\n\nWhat would you like me to do?",
     },
   ]);
 
-  async function sendMessage() {
-    if (!input.trim()) return;
+  const sendMessage = async () => {
+    const userMessage = message.trim();
 
-    const userMessage = input.trim();
+    if (!userMessage || isLoading) return;
 
-    setMessages((previous) => [
-      ...previous,
+    setMessages((prev) => [
+      ...prev,
       {
         role: "user",
         text: userMessage,
-        time: "Just now",
       },
     ]);
 
-    setInput("");
+    setMessage("");
+    setIsLoading(true);
 
-    // TEMPORARY RESPONSE
-    // Later replace this with your backend /api/chat call.
+    try {
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-    setTimeout(() => {
-      setMessages((previous) => [
-        ...previous,
+      const response = await fetch(`${apiUrl}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend returned ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const assistantResponse =
+        data.response ??
+        data.message ??
+        data.reply ??
+        "I received your command, but the backend returned no response.";
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: assistantResponse,
+        },
+      ]);
+    } catch (error) {
+      console.error("DevPilot API error:", error);
+
+      setMessages((prev) => [
+        ...prev,
         {
           role: "assistant",
           text:
-            "I received your command. 🤖\n\nYour DevPilot AI backend can be connected here next.",
-          time: "Just now",
+            "I received your command. 🤖\n\nThe DevPilot backend is currently unavailable. Once the backend is running, I'll be able to process your command.",
         },
       ]);
-    }, 600);
-  }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void sendMessage();
+    }
+  };
+
+  const startNewTask = () => {
+    setActivePage("Chat");
+    setMessages([
+      {
+        role: "assistant",
+        text:
+          "New task started. 🚀\n\nI'm ready. What would you like me to work on?",
+      },
+    ]);
+    setMessage("");
+  };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#050811] text-white">
+    <>
+      {showIntro && (
+        <DevPilotIntro onComplete={() => setShowIntro(false)} />
+      )}
 
-      {/* =====================================================
-          SIDEBAR
-      ====================================================== */}
+      <main className="flex h-screen min-h-screen overflow-hidden bg-[#060812] text-white">
+        {/* =====================================================
+            LEFT SIDEBAR
+        ====================================================== */}
 
-      <aside className="hidden w-[230px] shrink-0 flex-col border-r border-white/[0.08] bg-[#080b14] lg:flex">
+        <aside className="hidden h-screen w-[300px] shrink-0 flex-col border-r border-[#171d2c] bg-[#080b15] lg:flex">
+          {/* BRAND */}
 
-        {/* LOGO */}
-
-        <div className="flex h-[70px] items-center gap-3 border-b border-white/[0.08] px-5">
-
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 shadow-[0_0_25px_rgba(59,130,246,0.35)]">
-            <Bot size={21} />
-          </div>
-
-          <div className="text-lg font-semibold">
-            DevPilot{" "}
-            <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-              AI
-            </span>
-          </div>
-
-        </div>
-
-        {/* NAVIGATION */}
-
-        <div className="flex-1 overflow-y-auto px-3 py-5">
-
-          <p className="mb-4 px-3 text-[10px] font-semibold uppercase tracking-[0.25em] text-gray-600">
-            Workspace
-          </p>
-
-          <div className="space-y-1">
-
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const selected = active === item.name;
-
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => setActive(item.name)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm transition-all duration-200 ${
-                    selected
-                      ? "bg-gradient-to-r from-blue-600/20 to-purple-600/10 text-white ring-1 ring-blue-500/30"
-                      : "text-gray-500 hover:bg-white/[0.05] hover:text-gray-200"
-                  }`}
-                >
-                  <Icon
-                    size={18}
-                    className={
-                      selected
-                        ? "text-cyan-400"
-                        : "text-gray-500"
-                    }
-                  />
-
-                  <span>{item.name}</span>
-
-                  {selected && (
-                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-                  )}
-                </button>
-              );
-            })}
-
-          </div>
-        </div>
-
-        {/* USER */}
-
-        <div className="border-t border-white/[0.08] p-3">
-
-          <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3">
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-blue-500 font-semibold">
-              M
+          <div className="flex h-[94px] items-center border-b border-[#171d2c] px-7">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 shadow-[0_0_28px_rgba(59,130,246,0.25)]">
+              <Bot size={27} strokeWidth={2.1} />
             </div>
 
-            <div className="flex-1">
-              <p className="text-sm font-medium">
-                Manasa
-              </p>
-
-              <p className="text-[11px] text-gray-500">
-                Personal AI
-              </p>
-            </div>
-
-          </div>
-
-        </div>
-
-      </aside>
-
-      {/* =====================================================
-          MAIN
-      ====================================================== */}
-
-      <main className="flex min-w-0 flex-1 flex-col">
-
-        {/* TOP BAR */}
-
-        <header className="flex h-[70px] shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#080b14] px-5">
-
-          <div className="flex items-center gap-3">
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 lg:hidden">
-              <Bot
-                size={20}
-                className="text-cyan-400"
-              />
-            </div>
-
-            <div>
-              <h1 className="text-sm font-semibold">
-                DevPilot AI
+            <div className="ml-4">
+              <h1 className="text-[23px] font-bold tracking-tight">
+                DevPilot{" "}
+                <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+                  AI
+                </span>
               </h1>
 
-              <div className="flex items-center gap-2 text-[11px] text-gray-500">
-
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-
-                AI Agent Online
-
+              <div className="mt-1 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
+                <span className="text-xs text-slate-400">
+                  AI Agent Online
+                </span>
               </div>
             </div>
-
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
+          {/* NEW TASK */}
 
-            <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2">
+          <div className="px-5 pt-5">
+            <button
+              type="button"
+              onClick={startNewTask}
+              className="flex w-full items-center gap-3 rounded-xl border border-blue-500/30 bg-gradient-to-r from-blue-600/20 to-purple-600/20 px-5 py-3.5 transition hover:border-cyan-400/40 hover:bg-blue-500/20"
+            >
+              <Plus size={19} className="text-cyan-400" />
 
-              <Search
-                size={15}
-                className="text-gray-600"
-              />
+              <span className="font-medium">New Task</span>
+            </button>
+          </div>
+
+          {/* SEARCH */}
+
+          <div className="mt-4 px-5">
+            <div className="flex h-10 items-center rounded-lg border border-[#1b2336] bg-[#0d1220] px-3">
+              <Search size={17} className="text-slate-500" />
 
               <input
+                type="text"
                 placeholder="Search..."
-                className="w-32 bg-transparent text-xs outline-none placeholder:text-gray-600"
+                className="ml-3 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
               />
+            </div>
+          </div>
 
+          {/* WORKSPACE */}
+
+          <div className="mt-7 px-5">
+            <p className="mb-3 text-[11px] font-semibold tracking-[0.25em] text-slate-600">
+              WORKSPACE
+            </p>
+
+            <div className="space-y-1">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const active = activePage === item.name;
+
+                return (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => setActivePage(item.name)}
+                    className={`flex w-full items-center gap-4 rounded-xl px-4 py-3 text-left transition ${
+                      active
+                        ? "border border-purple-500/30 bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white"
+                        : "text-slate-400 hover:bg-[#101625] hover:text-white"
+                    }`}
+                  >
+                    <Icon
+                      size={20}
+                      className={
+                        active ? "text-cyan-400" : "text-slate-500"
+                      }
+                    />
+
+                    <span className="text-[15px]">{item.name}</span>
+
+                    {item.name === "Agents" && (
+                      <span className="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">
+                        6
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* PROJECTS */}
+
+          <div className="mt-8 px-5">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[11px] font-semibold tracking-[0.25em] text-slate-600">
+                PROJECTS
+              </p>
+
+              <button
+                type="button"
+                className="text-slate-500 transition hover:text-white"
+              >
+                <Plus size={17} />
+              </button>
             </div>
 
             <button
               type="button"
-              className="rounded-xl border border-white/[0.08] p-2 text-gray-500 transition hover:border-blue-500/30 hover:text-white"
+              className="w-full rounded-lg px-4 py-3 text-left transition hover:bg-[#101625]"
             >
-              <Plus size={18} />
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-cyan-400" />
+                <span className="text-sm text-slate-300">
+                  DevPilot AI
+                </span>
+              </div>
             </button>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-blue-500 text-xs font-semibold">
-              M
-            </div>
-
+            <button
+              type="button"
+              className="w-full rounded-lg px-4 py-3 text-left transition hover:bg-[#101625]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-purple-400" />
+                <span className="text-sm text-slate-300">
+                  Personal Assistant
+                </span>
+              </div>
+            </button>
           </div>
 
-        </header>
+          {/* PROFILE */}
+
+          <div className="mt-auto p-5">
+            <div className="flex items-center gap-3 rounded-2xl border border-[#20283b] bg-[#0c111e] p-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 font-bold">
+                M
+              </div>
+
+              <div className="flex-1">
+                <p className="text-sm font-medium">Manasa</p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Personal AI
+                </p>
+              </div>
+
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            </div>
+          </div>
+        </aside>
 
         {/* =====================================================
-            CONTENT
+            MAIN
         ====================================================== */}
 
-        <div className="flex min-h-0 flex-1">
+        <section className="flex h-screen min-w-0 flex-1 flex-col">
+          {/* HEADER */}
 
-          {active === "Chat" && (
+          <header className="flex h-[94px] shrink-0 items-center justify-between border-b border-[#171d2c] px-8">
+            <div>
+              <h2 className="text-xl font-semibold">{activePage}</h2>
+
+              <div className="mt-1 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+
+                <span className="text-sm text-slate-500">
+                  DevPilot AI Agent
+                </span>
+              </div>
+            </div>
+
+            <div className="hidden items-center gap-3 md:flex">
+              <button
+                type="button"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#20283b] bg-[#0b101c] transition hover:bg-[#111827]"
+              >
+                <Search size={19} className="text-slate-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={startNewTask}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#20283b] bg-[#0b101c] transition hover:bg-[#111827]"
+              >
+                <Plus size={19} className="text-slate-400" />
+              </button>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 font-semibold">
+                M
+              </div>
+            </div>
+          </header>
+
+          {/* PAGE */}
+
+          {activePage === "Chat" && (
             <ChatPage
-              input={input}
-              setInput={setInput}
               messages={messages}
+              message={message}
+              setMessage={setMessage}
               sendMessage={sendMessage}
+              handleKeyDown={handleKeyDown}
+              isLoading={isLoading}
             />
           )}
 
-          {active === "Dashboard" && <DashboardPage />}
+          {activePage === "Dashboard" && <DashboardPage />}
 
-          {active === "Agents" && <AgentsPage />}
+          {activePage === "Agents" && <AgentsPage />}
 
-          {active === "Browser" && <BrowserPage />}
+          {activePage === "Browser" && <BrowserPage />}
 
-          {active === "Terminal" && <TerminalPage />}
+          {activePage === "Terminal" && <TerminalPage />}
 
-          {active === "Files" && <FilesPage />}
+          {activePage === "Files" && <FilesPage />}
 
-          {active === "Documents" && <DocumentsPage />}
+          {activePage === "Documents" && <DocumentsPage />}
 
-          {active === "Memory" && <MemoryPage />}
+          {activePage === "Memory" && <MemoryPage />}
 
-          {active === "Tools" && <ToolsPage />}
+          {activePage === "Tools" && <ToolsPage />}
 
-          {active === "Settings" && <SettingsPage />}
-
-        </div>
-
+          {activePage === "Settings" && <SettingsPage />}
+        </section>
       </main>
-
-    </div>
+    </>
   );
 }
 
 /* =========================================================
-   CHAT PAGE
+   CHAT
 ========================================================= */
 
 function ChatPage({
-  input,
-  setInput,
   messages,
+  message,
+  setMessage,
   sendMessage,
+  handleKeyDown,
+  isLoading,
 }: {
-  input: string;
-  setInput: (value: string) => void;
   messages: Message[];
-  sendMessage: () => void;
+  message: string;
+  setMessage: (value: string) => void;
+  sendMessage: () => Promise<void>;
+  handleKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  isLoading: boolean;
 }) {
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex-1 overflow-y-auto px-8 py-8">
+        <div className="mx-auto max-w-5xl space-y-7">
+          {/* INTRO */}
 
-      <div className="flex-1 overflow-y-auto">
-
-        <div className="mx-auto max-w-4xl px-5 pb-10">
-
-          {/* GREETING */}
-
-          <div className="py-12 text-center">
-
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-purple-500/10 shadow-[0_0_35px_rgba(59,130,246,0.15)]">
-
-              <Bot
-                size={32}
-                className="text-cyan-400"
-              />
-
+          <div className="py-8 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-purple-500/10 shadow-[0_0_35px_rgba(59,130,246,0.15)]">
+              <Bot size={32} className="text-cyan-400" />
             </div>
 
-            <h2 className="text-4xl font-bold">
-
+            <h2 className="mt-6 text-4xl font-bold">
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
                 Hello!
               </span>
-
             </h2>
 
             <p className="mt-3 text-sm text-gray-400">
-              I'm DevPilot AI, your personal AI agent.
+              I&apos;m DevPilot AI, your personal AI agent.
             </p>
 
             <p className="mt-1 text-sm text-gray-600">
               Tell me what you want to accomplish.
             </p>
-
           </div>
 
           {/* MESSAGES */}
 
-          <div className="space-y-6">
+          {messages.map((msg, index) => {
+            const isUser = msg.role === "user";
 
-            {messages.map((message, index) => (
-
+            return (
               <div
-                key={index}
+                key={`${msg.role}-${index}`}
                 className={`flex ${
-                  message.role === "user"
-                    ? "justify-end"
-                    : "justify-start"
+                  isUser ? "justify-end" : "justify-start"
                 }`}
               >
-
-                {message.role === "assistant" && (
-                  <div className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-400/50 bg-[#0b1730]">
-
-                    <Bot
-                      size={19}
-                      className="text-cyan-400"
-                    />
-
+                {!isUser && (
+                  <div className="mr-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cyan-400/50 bg-[#0b1730]">
+                    <Bot size={22} className="text-cyan-400" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[650px] rounded-2xl border px-5 py-4 ${
-                    message.role === "assistant"
-                      ? "border-white/[0.08] bg-[#0d1220]"
-                      : "border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-blue-600/20"
+                  className={`max-w-[680px] rounded-2xl px-6 py-5 ${
+                    isUser
+                      ? "bg-gradient-to-br from-purple-600/80 to-blue-600/80"
+                      : "border border-[#20283b] bg-[#0e1422]"
                   }`}
                 >
-
-                  {message.role === "assistant" && (
-                    <p className="mb-2 text-sm font-semibold">
+                  {!isUser && (
+                    <p className="mb-3 font-semibold text-cyan-300">
                       DevPilot AI
                     </p>
                   )}
 
-                  <p className="whitespace-pre-line text-sm leading-7 text-gray-300">
-                    {message.text}
+                  <p className="whitespace-pre-line text-[15px] leading-7 text-slate-200">
+                    {msg.text}
                   </p>
 
-                  <p className="mt-2 text-right text-[10px] text-gray-600">
-                    {message.time}
+                  <p className="mt-3 text-right text-[11px] text-slate-600">
+                    {isUser ? "You" : "DevPilot"}
                   </p>
-
                 </div>
 
+                {isUser && (
+                  <div className="ml-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 font-semibold">
+                    M
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* LOADING */}
+
+          {isLoading && (
+            <div className="flex items-center gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-purple-600">
+                <Bot size={22} />
               </div>
 
-            ))}
-
-          </div>
-
+              <div className="rounded-2xl border border-[#20283b] bg-[#0e1422] px-6 py-4">
+                <div className="flex gap-1.5">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-400" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-400 [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-400 [animation-delay:300ms]" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
       </div>
 
-      {/* INPUT */}
+      {/* COMMAND BOX */}
 
-      <div className="border-t border-white/[0.08] bg-[#080b14] p-4">
-
-        <div className="mx-auto max-w-4xl">
-
-          <div className="flex items-center rounded-2xl border border-blue-500/50 bg-[#0b101c] p-2 shadow-[0_0_30px_rgba(37,99,235,0.08)]">
-
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  sendMessage();
-                }
-              }}
+      <div className="px-8 pb-7">
+        <div className="mx-auto max-w-5xl">
+          <div className="rounded-2xl border border-blue-500/60 bg-[#0b101d] shadow-[0_0_30px_rgba(37,99,235,0.07)]">
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Ask anything or give a command..."
-              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm outline-none placeholder:text-gray-600"
+              rows={2}
+              className="w-full resize-none bg-transparent px-6 pt-5 text-white outline-none placeholder:text-slate-600"
             />
 
-            <button
-              type="button"
-              className="mr-1 flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 hover:bg-white/[0.05] hover:text-cyan-400"
-            >
-              <Mic size={19} />
-            </button>
+            <div className="flex items-center justify-between px-4 pb-4 pt-2">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/5 hover:text-cyan-400"
+                >
+                  <Mic size={18} />
+                </button>
 
-            <button
-              type="button"
-              className="mr-1 flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 hover:bg-white/[0.05] hover:text-white"
-            >
-              <Paperclip size={18} />
-            </button>
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/5 hover:text-white"
+                >
+                  <Paperclip size={18} />
+                </button>
+              </div>
 
-            <button
-              type="button"
-              onClick={sendMessage}
-              className="flex h-10 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 shadow-[0_0_20px_rgba(99,102,241,0.3)] transition hover:scale-105"
-            >
-              <Send size={18} />
-            </button>
-
+              <button
+                type="button"
+                onClick={() => void sendMessage()}
+                disabled={!message.trim() || isLoading}
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Send size={19} />
+              </button>
+            </div>
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto">
-
+          <div className="mt-3 flex flex-wrap gap-2">
             {[
               "Build a website",
               "Write code",
               "Research this",
               "Open browser",
               "Run command",
-            ].map((command) => (
-
+            ].map((text) => (
               <button
-                key={command}
                 type="button"
-                onClick={() => setInput(command)}
-                className="whitespace-nowrap rounded-full border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-[11px] text-gray-500 hover:border-blue-500/30 hover:text-gray-300"
+                key={text}
+                onClick={() => setMessage(text)}
+                className="rounded-full border border-[#20283b] bg-[#0b101b] px-4 py-2 text-xs text-slate-400 transition hover:border-purple-500/40 hover:text-white"
               >
-                {command}
+                {text}
               </button>
-
             ))}
-
           </div>
-
         </div>
-
       </div>
-
-    </section>
+    </div>
   );
 }
 
@@ -518,84 +628,70 @@ function ChatPage({
 ========================================================= */
 
 function DashboardPage() {
+  const cards = [
+    {
+      title: "Tasks Completed",
+      value: "12",
+      icon: CheckCircle2,
+    },
+    {
+      title: "Messages",
+      value: "24",
+      icon: MessageSquare,
+    },
+    {
+      title: "Time Saved",
+      value: "18h",
+      icon: Clock3,
+    },
+    {
+      title: "Active Agents",
+      value: "6",
+      icon: Bot,
+    },
+  ];
+
   return (
     <PageContainer
       title="Dashboard"
-      subtitle="Overview of your DevPilot AI system"
+      subtitle="Overview of your personal AI agent"
     >
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          return (
+            <div
+              key={card.title}
+              className="rounded-2xl border border-[#20283b] bg-[#0d1321] p-5"
+            >
+              <Icon size={22} className="mb-5 text-cyan-400" />
 
-        <DashboardCard
-          icon={<CheckCircle2 />}
-          title="Tasks Completed"
-          value="12"
-        />
+              <p className="text-3xl font-bold">{card.value}</p>
 
-        <DashboardCard
-          icon={<MessageSquare />}
-          title="Messages"
-          value="24"
-        />
-
-        <DashboardCard
-          icon={<Clock />}
-          title="Time Saved"
-          value="18h"
-        />
-
-        <DashboardCard
-          icon={<Activity />}
-          title="Agent Activity"
-          value="98%"
-        />
-
+              <p className="mt-1 text-sm text-slate-500">
+                {card.title}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        <Panel title="Recent Activity">
+          <ActivityRow text="DevPilot AI initialized" />
+          <ActivityRow text="Chat agent is online" />
+          <ActivityRow text="Memory system ready" />
+          <ActivityRow text="Browser agent ready" />
+        </Panel>
 
         <Panel title="System Status">
-
-          <Status
-            name="AI Engine"
-            value="Online"
-            color="text-green-400"
-          />
-
-          <Status
-            name="Memory"
-            value="Optimized"
-            color="text-green-400"
-          />
-
-          <Status
-            name="Browser Agent"
-            value="Ready"
-            color="text-green-400"
-          />
-
-          <Status
-            name="Terminal Agent"
-            value="Ready"
-            color="text-green-400"
-          />
-
+          <StatusRow name="AI Engine" value="Online" />
+          <StatusRow name="Browser Agent" value="Ready" />
+          <StatusRow name="Terminal Agent" value="Ready" />
+          <StatusRow name="Memory" value="Optimized" />
         </Panel>
-
-        <Panel title="Recent Activity">
-
-          <ActivityRow text="Coder Agent completed a task" />
-
-          <ActivityRow text="Memory updated" />
-
-          <ActivityRow text="Browser Agent ready" />
-
-          <ActivityRow text="DevPilot started" />
-
-        </Panel>
-
       </div>
-
     </PageContainer>
   );
 }
@@ -608,61 +704,44 @@ function AgentsPage() {
   return (
     <PageContainer
       title="AI Agents"
-      subtitle="Manage the agents that power DevPilot"
+      subtitle="Your personal AI workforce"
     >
-
-      <div className="grid gap-4 md:grid-cols-2">
-
-        {agents.map((agent) => {
+      <div className="grid gap-5 md:grid-cols-2">
+        {agentList.map((agent) => {
           const Icon = agent.icon;
 
           return (
             <div
               key={agent.name}
-              className="rounded-2xl border border-white/[0.08] bg-[#0b101c] p-5 transition hover:border-blue-500/30"
+              className="rounded-2xl border border-[#20283b] bg-[#0d1321] p-6 transition hover:border-cyan-500/30"
             >
-
               <div className="flex items-center gap-4">
-
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
-
-                  <Icon
-                    size={22}
-                    className="text-cyan-400"
-                  />
-
+                  <Icon size={22} className="text-cyan-400" />
                 </div>
 
                 <div className="flex-1">
+                  <h3 className="font-semibold">{agent.name}</h3>
 
-                  <h3 className="font-semibold">
-                    {agent.name}
-                  </h3>
-
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-sm text-slate-500">
                     {agent.description}
                   </p>
-
                 </div>
 
-                <span className="h-2 w-2 rounded-full bg-green-400" />
-
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
               </div>
 
               <button
                 type="button"
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] py-2 text-xs text-gray-400 hover:bg-white/[0.04] hover:text-white"
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-[#283248] py-2.5 text-sm text-slate-300 transition hover:bg-white/5"
               >
-                <Play size={13} />
-                Run Agent
+                <Play size={14} />
+                Open Agent
               </button>
-
             </div>
           );
         })}
-
       </div>
-
     </PageContainer>
   );
 }
@@ -677,45 +756,55 @@ function BrowserPage() {
       title="Browser Agent"
       subtitle="Let DevPilot browse and research the web"
     >
+      <div className="overflow-hidden rounded-2xl border border-[#20283b] bg-[#0d1321]">
+        <div className="flex items-center gap-2 border-b border-[#20283b] px-5 py-3">
+          <span className="h-3 w-3 rounded-full bg-red-400" />
+          <span className="h-3 w-3 rounded-full bg-yellow-400" />
+          <span className="h-3 w-3 rounded-full bg-green-400" />
 
-      <div className="rounded-2xl border border-white/[0.08] bg-[#0b101c] p-5">
-
-        <div className="flex gap-2">
-
-          <input
-            placeholder="Enter a website or search query..."
-            className="flex-1 rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3 text-sm outline-none focus:border-blue-500/50"
-          />
-
-          <button className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-5 text-sm">
-            Browse
-          </button>
-
+          <span className="ml-3 text-xs text-slate-600">
+            DevPilot Browser
+          </span>
         </div>
 
-        <div className="mt-8 flex h-[350px] items-center justify-center rounded-xl border border-dashed border-white/[0.08]">
+        <div className="p-5">
+          <div className="flex gap-3">
+            <div className="flex flex-1 items-center rounded-xl border border-[#20283b] bg-[#080c16] px-4">
+              <Globe size={17} className="text-slate-500" />
 
-          <div className="text-center">
+              <input
+                type="text"
+                placeholder="Enter a website or search query..."
+                className="ml-3 w-full bg-transparent py-3 text-sm text-white outline-none placeholder:text-slate-600"
+              />
+            </div>
 
-            <Globe
-              size={40}
-              className="mx-auto text-gray-700"
-            />
-
-            <p className="mt-3 text-sm text-gray-500">
-              Browser workspace
-            </p>
-
-            <p className="mt-1 text-xs text-gray-700">
-              Your browser agent will appear here.
-            </p>
-
+            <button
+              type="button"
+              className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 px-6 text-sm font-medium"
+            >
+              Search
+            </button>
           </div>
 
+          <div className="mt-6 flex h-[350px] items-center justify-center rounded-xl border border-dashed border-[#25304a]">
+            <div className="text-center">
+              <Globe
+                size={40}
+                className="mx-auto text-slate-700"
+              />
+
+              <p className="mt-4 font-medium text-slate-500">
+                Browser workspace
+              </p>
+
+              <p className="mt-1 text-xs text-slate-700">
+                Real browser automation will be connected here.
+              </p>
+            </div>
+          </div>
         </div>
-
       </div>
-
     </PageContainer>
   );
 }
@@ -730,48 +819,37 @@ function TerminalPage() {
       title="Terminal"
       subtitle="Execute commands through your AI agent"
     >
+      <div className="overflow-hidden rounded-2xl border border-[#20283b] bg-black">
+        <div className="flex items-center gap-2 border-b border-[#20283b] px-5 py-3">
+          <span className="h-3 w-3 rounded-full bg-red-400" />
+          <span className="h-3 w-3 rounded-full bg-yellow-400" />
+          <span className="h-3 w-3 rounded-full bg-green-400" />
 
-      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#05070c]">
-
-        <div className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-3">
-
-          <span className="h-3 w-3 rounded-full bg-red-500" />
-          <span className="h-3 w-3 rounded-full bg-yellow-500" />
-          <span className="h-3 w-3 rounded-full bg-green-500" />
-
-          <span className="ml-3 text-xs text-gray-600">
+          <span className="ml-3 text-xs text-slate-600">
             DevPilot Terminal
           </span>
-
         </div>
 
-        <div className="h-[400px] p-5 font-mono text-sm">
-
-          <p className="text-green-400">
-            DevPilot Terminal
+        <div className="h-[420px] p-6 font-mono text-sm">
+          <p className="text-emerald-400">
+            devpilot@agent:~$
           </p>
 
-          <p className="mt-2 text-gray-600">
-            Ready for commands...
+          <p className="mt-3 text-slate-600">
+            Terminal agent is ready...
           </p>
 
-          <div className="mt-8 flex gap-2">
-
-            <span className="text-cyan-400">
-              $
-            </span>
+          <div className="mt-8 flex items-center gap-2">
+            <span className="text-cyan-400">$</span>
 
             <input
-              className="flex-1 bg-transparent outline-none text-gray-300"
+              type="text"
               placeholder="Type a command..."
+              className="flex-1 bg-transparent text-slate-300 outline-none placeholder:text-slate-700"
             />
-
           </div>
-
         </div>
-
       </div>
-
     </PageContainer>
   );
 }
@@ -781,41 +859,33 @@ function TerminalPage() {
 ========================================================= */
 
 function FilesPage() {
+  const files = [
+    "package.json",
+    "README.md",
+    "next.config.ts",
+    "app/page.tsx",
+    "components/intro/DevPilotIntro.tsx",
+  ];
+
   return (
     <PageContainer
       title="Files"
-      subtitle="Manage files used by your AI agent"
+      subtitle="Files available to DevPilot"
     >
-
-      <div className="grid gap-3">
-
-        {[
-          "project",
-          "src",
-          "documents",
-          "downloads",
-        ].map((folder) => (
-
+      <div className="overflow-hidden rounded-2xl border border-[#20283b] bg-[#0d1321]">
+        {files.map((file) => (
           <div
-            key={folder}
-            className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-[#0b101c] p-4 hover:border-blue-500/30"
+            key={file}
+            className="flex items-center gap-4 border-b border-[#171d2c] px-6 py-4 transition last:border-b-0 hover:bg-white/[0.02]"
           >
+            <FileText size={18} className="text-cyan-400" />
 
-            <FolderOpen
-              size={20}
-              className="text-yellow-400"
-            />
-
-            <span className="text-sm">
-              {folder}
+            <span className="text-sm text-slate-300">
+              {file}
             </span>
-
           </div>
-
         ))}
-
       </div>
-
     </PageContainer>
   );
 }
@@ -828,15 +898,35 @@ function DocumentsPage() {
   return (
     <PageContainer
       title="Documents"
-      subtitle="Documents available to DevPilot"
+      subtitle="Knowledge sources for your AI agent"
     >
+      <div className="grid gap-5 md:grid-cols-3">
+        {[
+          "Project README",
+          "AI Instructions",
+          "Architecture",
+          "API Documentation",
+          "Personal Notes",
+          "Reference Files",
+        ].map((doc) => (
+          <button
+            key={doc}
+            type="button"
+            className="rounded-2xl border border-[#20283b] bg-[#0d1321] p-6 text-left transition hover:border-purple-500/30"
+          >
+            <FileText
+              size={22}
+              className="mb-5 text-purple-400"
+            />
 
-      <EmptyState
-        icon={<FileText size={40} />}
-        title="No documents yet"
-        text="Upload documents so DevPilot can read and understand them."
-      />
+            <h3 className="font-semibold">{doc}</h3>
 
+            <p className="mt-2 text-xs text-slate-500">
+              Knowledge source
+            </p>
+          </button>
+        ))}
+      </div>
     </PageContainer>
   );
 }
@@ -846,41 +936,57 @@ function DocumentsPage() {
 ========================================================= */
 
 function MemoryPage() {
+  const memories = [
+    "Current project: DevPilot AI",
+    "Preferred interface: dark futuristic UI",
+    "AI backend: FastAPI",
+    "Primary AI provider: Gemini",
+    "Desktop assistant planned",
+  ];
+
   return (
     <PageContainer
       title="Memory"
-      subtitle="What DevPilot remembers about your workspace"
+      subtitle="Information DevPilot can remember"
     >
-
-      <div className="space-y-3">
-
-        {[
-          "User prefers concise technical explanations.",
-          "DevPilot project uses Next.js frontend.",
-          "AI backend uses FastAPI.",
-          "Gemini is the primary AI model.",
-        ].map((memory, index) => (
-
-          <div
-            key={index}
-            className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-[#0b101c] p-4"
-          >
-
+      <div className="rounded-2xl border border-[#20283b] bg-[#0d1321] p-6">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10">
             <Brain
-              size={18}
+              size={23}
               className="text-purple-400"
             />
-
-            <span className="text-sm text-gray-400">
-              {memory}
-            </span>
-
           </div>
 
-        ))}
+          <div>
+            <h3 className="font-semibold">
+              Personal Memory
+            </h3>
 
+            <p className="mt-1 text-sm text-slate-500">
+              Long-term context for DevPilot
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {memories.map((memory) => (
+            <div
+              key={memory}
+              className="flex items-center gap-3 rounded-xl bg-[#080d18] p-4"
+            >
+              <Circle
+                size={13}
+                className="text-purple-400"
+              />
+
+              <span className="text-sm text-slate-400">
+                {memory}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
-
     </PageContainer>
   );
 }
@@ -890,40 +996,68 @@ function MemoryPage() {
 ========================================================= */
 
 function ToolsPage() {
+  const tools = [
+    {
+      name: "Code Generator",
+      description: "Generate and modify source code",
+      icon: Code2,
+    },
+    {
+      name: "Web Search",
+      description: "Search the web for information",
+      icon: Search,
+    },
+    {
+      name: "Browser",
+      description: "Navigate websites automatically",
+      icon: Globe,
+    },
+    {
+      name: "Terminal",
+      description: "Execute commands on the machine",
+      icon: Terminal,
+    },
+    {
+      name: "File Manager",
+      description: "Read and manage files",
+      icon: FolderOpen,
+    },
+    {
+      name: "Automation",
+      description: "Run automated workflows",
+      icon: Zap,
+    },
+  ];
+
   return (
     <PageContainer
       title="Tools"
-      subtitle="Tools available to your AI agent"
+      subtitle="Tools DevPilot can use to complete tasks"
     >
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {tools.map((tool) => {
+          const Icon = tool.icon;
 
-      <div className="grid gap-4 md:grid-cols-2">
+          return (
+            <button
+              type="button"
+              key={tool.name}
+              className="rounded-2xl border border-[#20283b] bg-[#0d1321] p-6 text-left transition hover:border-cyan-500/30"
+            >
+              <Icon
+                size={22}
+                className="mb-5 text-cyan-400"
+              />
 
-        <ToolCard
-          icon={<Terminal />}
-          name="Terminal"
-          description="Execute system commands"
-        />
+              <h3 className="font-semibold">{tool.name}</h3>
 
-        <ToolCard
-          icon={<Globe />}
-          name="Web Browser"
-          description="Browse and research websites"
-        />
-
-        <ToolCard
-          icon={<FolderOpen />}
-          name="File Manager"
-          description="Read and manage files"
-        />
-
-        <ToolCard
-          icon={<Database />}
-          name="Memory"
-          description="Store and retrieve information"
-        />
-
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {tool.description}
+              </p>
+            </button>
+          );
+        })}
       </div>
-
     </PageContainer>
   );
 }
@@ -936,43 +1070,39 @@ function SettingsPage() {
   return (
     <PageContainer
       title="Settings"
-      subtitle="Configure your DevPilot AI"
+      subtitle="Configure your personal AI agent"
     >
-
-      <div className="space-y-4">
-
-        <Setting
-          title="AI Engine"
-          description="Primary AI model used by DevPilot"
-          value="Gemini"
+      <div className="max-w-3xl space-y-4">
+        <SettingRow
+          title="AI Agent"
+          description="Enable the DevPilot AI assistant"
+          enabled
         />
 
-        <Setting
-          title="Voice Assistant"
-          description="Enable wake word and voice commands"
-          value="Enabled"
+        <SettingRow
+          title="Voice Wake Word"
+          description='Wake DevPilot by saying "Hey DevPilot"'
+          enabled
         />
 
-        <Setting
+        <SettingRow
           title="Memory"
-          description="Allow DevPilot to remember useful information"
-          value="Enabled"
+          description="Allow DevPilot to remember useful context"
+          enabled
         />
 
-        <Setting
+        <SettingRow
           title="Desktop Agent"
-          description="Allow DevPilot to interact with desktop applications"
-          value="Ready"
+          description="Allow DevPilot to interact with the desktop"
+          enabled
         />
-
       </div>
-
     </PageContainer>
   );
 }
 
 /* =========================================================
-   SHARED COMPONENTS
+   COMMON COMPONENTS
 ========================================================= */
 
 function PageContainer({
@@ -982,30 +1112,22 @@ function PageContainer({
 }: {
   title: string;
   subtitle: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <section className="flex-1 overflow-y-auto">
-
-      <div className="mx-auto max-w-5xl p-6 md:p-10">
-
+    <div className="flex-1 overflow-y-auto p-8">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-8">
+          <h1 className="text-3xl font-bold">{title}</h1>
 
-          <h2 className="text-3xl font-bold">
-            {title}
-          </h2>
-
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-slate-500">
             {subtitle}
           </p>
-
         </div>
 
         {children}
-
       </div>
-
-    </section>
+    </div>
   );
 }
 
@@ -1014,181 +1136,79 @@ function Panel({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#0b101c] p-5">
+    <div className="rounded-2xl border border-[#20283b] bg-[#0d1321] p-6">
+      <h2 className="mb-5 font-semibold">{title}</h2>
 
-      <h3 className="mb-5 text-sm font-semibold">
-        {title}
-      </h3>
-
-      <div className="space-y-4">
-        {children}
-      </div>
-
-    </div>
-  );
-}
-
-function DashboardCard({
-  icon,
-  title,
-  value,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#0b101c] p-5">
-
-      <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-cyan-400">
-        {icon}
-      </div>
-
-      <p className="text-2xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-gray-500">
-        {title}
-      </p>
-
-    </div>
-  );
-}
-
-function Status({
-  name,
-  value,
-  color,
-}: {
-  name: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-
-      <span className="text-gray-500">
-        {name}
-      </span>
-
-      <span className={color}>
-        {value}
-      </span>
-
+      <div className="space-y-1">{children}</div>
     </div>
   );
 }
 
 function ActivityRow({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 border-b border-[#171d2c] py-3 last:border-b-0">
+      <Activity size={16} className="text-cyan-400" />
 
-      <span className="h-2 w-2 rounded-full bg-cyan-400" />
-
-      <span className="text-sm text-gray-400">
+      <span className="text-sm text-slate-400">
         {text}
       </span>
-
     </div>
   );
 }
 
-function EmptyState({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08]">
-
-      <div className="text-gray-700">
-        {icon}
-      </div>
-
-      <h3 className="mt-4 font-semibold">
-        {title}
-      </h3>
-
-      <p className="mt-2 max-w-md text-center text-xs text-gray-600">
-        {text}
-      </p>
-
-    </div>
-  );
-}
-
-function ToolCard({
-  icon,
+function StatusRow({
   name,
-  description,
-}: {
-  icon: React.ReactNode;
-  name: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#0b101c] p-5">
-
-      <div className="flex items-center gap-4">
-
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-cyan-400">
-          {icon}
-        </div>
-
-        <div>
-
-          <h3 className="text-sm font-semibold">
-            {name}
-          </h3>
-
-          <p className="mt-1 text-xs text-gray-500">
-            {description}
-          </p>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
-
-function Setting({
-  title,
-  description,
   value,
 }: {
-  title: string;
-  description: string;
+  name: string;
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-[#0b101c] p-5">
-
-      <div>
-
-        <h3 className="text-sm font-semibold">
-          {title}
-        </h3>
-
-        <p className="mt-1 text-xs text-gray-500">
-          {description}
-        </p>
-
-      </div>
-
-      <span className="rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-xs text-green-400">
-        {value}
+    <div className="flex items-center justify-between border-b border-[#171d2c] py-3 last:border-b-0">
+      <span className="text-sm text-slate-500">
+        {name}
       </span>
 
+      <span className="text-sm text-emerald-400">
+        • {value}
+      </span>
+    </div>
+  );
+}
+
+function SettingRow({
+  title,
+  description,
+  enabled,
+}: {
+  title: string;
+  description: string;
+  enabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-[#20283b] bg-[#0d1321] p-5">
+      <div>
+        <h3 className="font-medium">{title}</h3>
+
+        <p className="mt-1 text-sm text-slate-500">
+          {description}
+        </p>
+      </div>
+
+      <div
+        className={`rounded-full p-1 transition ${
+          enabled ? "bg-cyan-500" : "bg-slate-700"
+        }`}
+      >
+        <div
+          className={`h-4 w-4 rounded-full bg-white transition ${
+            enabled ? "translate-x-5" : ""
+          }`}
+        />
+      </div>
     </div>
   );
 }
