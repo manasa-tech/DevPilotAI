@@ -55,8 +55,10 @@ export default function DevPilotIntro({
 
             <div className="relative h-full w-full overflow-hidden rounded-[30px] border border-white/10 bg-[#081020] shadow-[0_0_60px_rgba(59,130,246,0.25)]">
               <Image
-                src="/devpilot-logo.png"
+                src="/AI.png"
                 alt="DevPilot AI"
+                width={110}
+  height={110}
                 fill
                 priority
                 className="object-cover"
