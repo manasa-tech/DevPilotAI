@@ -1,57 +1,90 @@
 "use client";
 
-import { ReactNode } from "react";
+import { Bell, Menu, Search, Sparkles } from "lucide-react";
 
 interface HeaderProps {
   title: string;
-  subtitle?: string;
-  icon?: ReactNode;
-  action?: ReactNode;
+  description?: string;
+  onMenuClick?: () => void;
 }
 
 export default function Header({
   title,
-  subtitle,
-  icon,
-  action,
+  description,
+  onMenuClick,
 }: HeaderProps) {
   return (
-    <div className="flex items-center justify-between border-b border-slate-800 bg-[#0B1120] px-8 py-6">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050507]/90 backdrop-blur-xl">
+      <div className="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Left */}
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Mobile Menu */}
+          <button
+            onClick={onMenuClick}
+            className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
 
-      {/* Left */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-lg font-semibold text-white sm:text-xl">
+                {title}
+              </h1>
+            </div>
 
-      <div className="flex items-center gap-4">
-
-        {icon && (
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg">
-            {icon}
+            {description && (
+              <p className="mt-1 hidden truncate text-sm text-zinc-500 sm:block">
+                {description}
+              </p>
+            )}
           </div>
-        )}
-
-        <div>
-
-          <h1 className="text-3xl font-bold text-white">
-            {title}
-          </h1>
-
-          {subtitle && (
-            <p className="text-sm text-slate-400 mt-1">
-              {subtitle}
-            </p>
-          )}
-
         </div>
 
+        {/* Right */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Search */}
+          <button
+            className="hidden rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-zinc-500 transition hover:border-white/20 hover:bg-white/5 hover:text-white md:flex"
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+
+          {/* AI Status */}
+          <div className="hidden items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-2 sm:flex">
+            <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+
+            <span className="text-xs font-medium text-violet-300">
+              AI Ready
+            </span>
+
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          </div>
+
+          {/* Notifications */}
+          <button
+            className="relative rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-zinc-400 transition hover:border-white/20 hover:bg-white/5 hover:text-white"
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-violet-500" />
+          </button>
+
+          {/* Profile */}
+          <button className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1.5 pr-2.5 transition hover:border-white/20 hover:bg-white/5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold text-white">
+              V
+            </div>
+
+            <span className="hidden text-sm font-medium text-zinc-300 lg:block">
+              Developer
+            </span>
+          </button>
+        </div>
       </div>
-
-      {/* Right */}
-
-      {action && (
-        <div>
-          {action}
-        </div>
-      )}
-
-    </div>
+    </header>
   );
 }
