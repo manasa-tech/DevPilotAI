@@ -1,548 +1,353 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  Bot,
-  Code2,
-  FileCode2,
-  MessageSquare,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { useState } from "react";
 
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
-
-type HistoryType = "chat" | "code" | "debug" | "explain";
-
-type HistoryItem = {
-  id: number;
-  title: string;
-  preview: string;
-  type: HistoryType;
-  date: string;
-};
-
-const initialHistory: HistoryItem[] = [
+const historyItems = [
   {
     id: 1,
-    title: "React Login Page",
-    preview: "Create a responsive React login page with validation...",
-    type: "code",
-    date: "Today, 10:30 AM",
+    title: "Build a React component",
+    type: "Chat",
+    date: "Today",
+    language: "React",
   },
   {
     id: 2,
-    title: "API 500 Error",
-    preview: "Why am I getting a 500 internal server error?",
-    type: "debug",
-    date: "Today, 09:15 AM",
+    title: "Fix API connection",
+    type: "Chat",
+    date: "Yesterday",
+    language: "TypeScript",
   },
   {
     id: 3,
-    title: "Next.js Architecture",
-    preview: "Explain the recommended folder structure for Next.js...",
-    type: "explain",
-    date: "Yesterday",
+    title: "DSA Array Problem",
+    type: "Code",
+    date: "Oct 4",
+    language: "C++",
   },
   {
     id: 4,
-    title: "JavaScript Function",
-    preview: "Explain how this function works step by step...",
-    type: "chat",
-    date: "Yesterday",
-  },
-  {
-    id: 5,
-    title: "Todo Application",
-    preview: "Generate a simple todo application using JavaScript...",
-    type: "code",
-    date: "Aug 31, 2026",
-  },
-  {
-    id: 6,
-    title: "Python Error",
-    preview: "Fix the index error in my Python program...",
-    type: "debug",
-    date: "Aug 30, 2026",
+    title: "Explain Python code",
+    type: "Chat",
+    date: "Oct 3",
+    language: "Python",
   },
 ];
 
-const filterOptions = [
-  { label: "All", value: "all" },
-  { label: "Chats", value: "chat" },
-  { label: "Code", value: "code" },
-  { label: "Debug", value: "debug" },
-  { label: "Explain", value: "explain" },
-] as const;
-
 export default function HistoryPage() {
-  const [history, setHistory] =
-    useState<HistoryItem[]>(initialHistory);
-
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
 
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showClearModal, setShowClearModal] = useState(false);
-
-  const filteredHistory = useMemo(() => {
-    const searchText = search.toLowerCase().trim();
-
-    return history.filter((item) => {
-      const matchesFilter =
-        filter === "all" || item.type === filter;
-
-      const matchesSearch =
-        !searchText ||
-        item.title.toLowerCase().includes(searchText) ||
-        item.preview.toLowerCase().includes(searchText);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [history, search, filter]);
-
-  const deleteItem = (id: number) => {
-    setHistory((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
-  };
-
-  const clearHistory = () => {
-    setHistory([]);
-    setShowClearModal(false);
-  };
-
-  const resetFilters = () => {
-    setSearch("");
-    setFilter("all");
-  };
-
-  return (
-    <div className="min-h-screen bg-[#050507] text-white">
-      <Sidebar
-        mobileOpen={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-      />
-
-      <main className="lg:ml-72">
-        <Header
-          title="History"
-          description="View and manage your previous DevPilot sessions"
-          onMenuClick={() => setMobileSidebarOpen(true)}
-        />
-
-        <div className="p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
-            {/* Intro */}
-            <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1.5">
-                  <Bot className="h-3.5 w-3.5 text-violet-400" />
-
-                  <span className="text-xs font-medium text-violet-300">
-                    Activity
-                  </span>
-                </div>
-
-                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  Your history
-                </h2>
-
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
-                  Quickly find your previous chats, generated code,
-                  debugging sessions, and explanations.
-                </p>
-              </div>
-
-              {history.length > 0 && (
-                <button
-                  onClick={() => setShowClearModal(true)}
-                  className="flex w-fit items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-xs font-medium text-red-400 transition hover:bg-red-500/10"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Clear History
-                </button>
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                label="Total Sessions"
-                value={history.length}
-                icon={<Bot className="h-4 w-4" />}
-              />
-
-              <StatCard
-                label="Chats"
-                value={
-                  history.filter((item) => item.type === "chat")
-                    .length
-                }
-                icon={<MessageSquare className="h-4 w-4" />}
-              />
-
-              <StatCard
-                label="Code"
-                value={
-                  history.filter((item) => item.type === "code")
-                    .length
-                }
-                icon={<Code2 className="h-4 w-4" />}
-              />
-
-              <StatCard
-                label="Debug Sessions"
-                value={
-                  history.filter((item) => item.type === "debug")
-                    .length
-                }
-                icon={<FileCode2 className="h-4 w-4" />}
-              />
-            </div>
-
-            {/* History Container */}
-            <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0f]">
-              {/* Search / Filters */}
-              <div className="flex flex-col gap-4 border-b border-white/10 p-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="relative w-full lg:max-w-md">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
-
-                  <input
-                    value={search}
-                    onChange={(event) =>
-                      setSearch(event.target.value)
-                    }
-                    placeholder="Search history..."
-                    className="h-10 w-full rounded-xl border border-white/10 bg-[#070709] pl-10 pr-10 text-sm text-zinc-300 outline-none transition placeholder:text-zinc-700 focus:border-violet-500/40"
-                  />
-
-                  {search && (
-                    <button
-                      onClick={() => setSearch("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 transition hover:text-zinc-300"
-                      aria-label="Clear search"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-[#070709] p-1">
-                  {filterOptions.map((option) => {
-                    const active = filter === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() => setFilter(option.value)}
-                        className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
-                          active
-                            ? "bg-violet-600 text-white"
-                            : "text-zinc-600 hover:bg-white/5 hover:text-zinc-300"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* List */}
-              <div className="divide-y divide-white/5">
-                {filteredHistory.length === 0 ? (
-                  <EmptyHistory
-                    hasSearch={Boolean(search)}
-                    hasHistory={history.length > 0}
-                    onReset={resetFilters}
-                  />
-                ) : (
-                  filteredHistory.map((item) => (
-                    <HistoryRow
-                      key={item.id}
-                      item={item}
-                      onDelete={() => deleteItem(item.id)}
-                    />
-                  ))
-                )}
-              </div>
-
-              {/* Footer */}
-              {filteredHistory.length > 0 && (
-                <div className="border-t border-white/5 px-5 py-4">
-                  <p className="text-xs text-zinc-700">
-                    Showing {filteredHistory.length} of{" "}
-                    {history.length} sessions
-                  </p>
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
-      </main>
-
-      {/* Clear Modal */}
-      {showClearModal && (
-        <ClearHistoryModal
-          onCancel={() => setShowClearModal(false)}
-          onConfirm={clearHistory}
-        />
-      )}
-    </div>
+  const filteredHistory = historyItems.filter((item) =>
+    item.title.toLowerCase().includes(search.toLowerCase())
   );
-}
 
-/* -------------------------------- */
-/* History Row                       */
-/* -------------------------------- */
-
-function HistoryRow({
-  item,
-  onDelete,
-}: {
-  item: HistoryItem;
-  onDelete: () => void;
-}) {
   return (
-    <div className="group flex items-center gap-4 px-4 py-4 transition hover:bg-white/[0.02] sm:px-5">
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${getIconBackground(
-          item.type
-        )}`}
-      >
-        {getHistoryIcon(item.type)}
-      </div>
+    <div className="history-page">
 
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-          <h3 className="truncate text-sm font-medium text-zinc-200">
-            {item.title}
-          </h3>
+      {/* HEADER */}
+      <header className="header">
 
-          <span
-            className={`w-fit rounded-md px-2 py-0.5 text-[10px] font-medium ${getBadgeStyle(
-              item.type
-            )}`}
-          >
-            {getTypeName(item.type)}
+        <div>
+          <h1>History</h1>
+          <p>Your previous AI coding sessions</p>
+        </div>
+
+        <div className="header-actions">
+
+          <div className="search">
+            🔍
+            <input
+              placeholder="Search history..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <button className="new-chat">
+            + New Chat
+          </button>
+
+        </div>
+
+      </header>
+
+      {/* CONTENT */}
+      <main className="content">
+
+        <div className="section-header">
+          <h2>Recent Activity</h2>
+
+          <span>
+            {filteredHistory.length} sessions
           </span>
         </div>
 
-        <p className="mt-1 truncate text-xs text-zinc-600">
-          {item.preview}
-        </p>
-      </div>
+        <div className="history-list">
 
-      <span className="hidden shrink-0 text-xs text-zinc-700 md:block">
-        {item.date}
-      </span>
+          {filteredHistory.length === 0 ? (
+            <div className="empty">
+              <div className="empty-icon">📂</div>
+              <h3>No history found</h3>
+              <p>
+                Your previous coding sessions will appear here.
+              </p>
+            </div>
+          ) : (
+            filteredHistory.map((item) => (
 
-      <button
-        onClick={onDelete}
-        className="rounded-lg p-2 text-zinc-700 transition hover:bg-red-500/10 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
-        aria-label={`Delete ${item.title}`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
+              <div className="history-card" key={item.id}>
 
-/* -------------------------------- */
-/* Stat Card                         */
-/* -------------------------------- */
+                <div className="file-icon">
+                  {item.type === "Code" ? "</>" : "💬"}
+                </div>
 
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4">
-      <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
-        {icon}
-      </div>
+                <div className="details">
 
-      <p className="text-xs text-zinc-600">{label}</p>
+                  <h3>{item.title}</h3>
 
-      <p className="mt-1 text-xl font-bold text-white">{value}</p>
-    </div>
-  );
-}
+                  <div className="meta">
+                    <span>{item.type}</span>
+                    <span>•</span>
+                    <span>{item.language}</span>
+                    <span>•</span>
+                    <span>{item.date}</span>
+                  </div>
 
-/* -------------------------------- */
-/* Empty History                     */
-/* -------------------------------- */
+                </div>
 
-function EmptyHistory({
-  hasSearch,
-  hasHistory,
-  onReset,
-}: {
-  hasSearch: boolean;
-  hasHistory: boolean;
-  onReset: () => void;
-}) {
-  return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center px-5 text-center">
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02]">
-        <Search className="h-7 w-7 text-zinc-700" />
-      </div>
+                <button className="open-button">
+                  Open →
+                </button>
 
-      <h3 className="text-base font-semibold text-zinc-300">
-        {hasSearch ? "No results found" : "No history yet"}
-      </h3>
+                <button className="more">
+                  ⋮
+                </button>
 
-      <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-600">
-        {hasSearch
-          ? "Try another search term or reset your filters."
-          : hasHistory
-            ? "There are no sessions matching the selected filter."
-            : "Your DevPilot conversations and coding sessions will appear here."}
-      </p>
+              </div>
 
-      {(hasSearch || hasHistory) && (
-        <button
-          onClick={onReset}
-          className="mt-5 rounded-lg border border-white/10 px-4 py-2 text-xs font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white"
-        >
-          Reset Filters
-        </button>
-      )}
-    </div>
-  );
-}
+            ))
+          )}
 
-/* -------------------------------- */
-/* Clear History Modal               */
-/* -------------------------------- */
-
-function ClearHistoryModal({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0b0f] p-6 shadow-2xl">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10">
-          <Trash2 className="h-5 w-5 text-red-400" />
         </div>
 
-        <h2 className="mt-5 text-lg font-semibold text-white">
-          Clear all history?
-        </h2>
+      </main>
 
-        <p className="mt-2 text-sm leading-6 text-zinc-500">
-          This will remove all your current DevPilot history from
-          this page. This action cannot be undone.
-        </p>
+      <style jsx>{`
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white"
-          >
-            Cancel
-          </button>
+        .history-page {
+          min-height: 100vh;
+          background: #08070b;
+          color: white;
+          font-family: Arial, sans-serif;
+        }
 
-          <button
-            onClick={onConfirm}
-            className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500"
-          >
-            Clear History
-          </button>
-        </div>
-      </div>
+        .header {
+          height: 80px;
+          border-bottom: 1px solid #28242f;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 40px;
+        }
+
+        .header h1 {
+          margin: 0;
+          font-size: 24px;
+        }
+
+        .header p {
+          margin: 6px 0 0;
+          color: #77717f;
+          font-size: 13px;
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .search {
+          width: 240px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 12px;
+          border: 1px solid #322e39;
+          border-radius: 10px;
+          background: #111016;
+          color: #77717f;
+        }
+
+        .search input {
+          width: 100%;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: white;
+        }
+
+        .new-chat {
+          border: none;
+          border-radius: 10px;
+          padding: 11px 16px;
+          background: linear-gradient(
+            135deg,
+            #8b45ff,
+            #6624e8
+          );
+          color: white;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .content {
+          max-width: 1100px;
+          margin: auto;
+          padding: 40px;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+          font-size: 18px;
+        }
+
+        .section-header span {
+          color: #77717f;
+          font-size: 13px;
+        }
+
+        .history-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .history-card {
+          min-height: 75px;
+          border: 1px solid #29252f;
+          border-radius: 13px;
+          background: #100e14;
+          display: flex;
+          align-items: center;
+          padding: 15px;
+          gap: 15px;
+          transition: 0.2s;
+        }
+
+        .history-card:hover {
+          border-color: #7040bd;
+          background: #15111d;
+        }
+
+        .file-icon {
+          width: 43px;
+          height: 43px;
+          border-radius: 11px;
+          background: #21123a;
+          color: #a975ff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: bold;
+        }
+
+        .details {
+          flex: 1;
+        }
+
+        .details h3 {
+          margin: 0 0 7px;
+          font-size: 14px;
+        }
+
+        .meta {
+          display: flex;
+          gap: 7px;
+          color: #706a78;
+          font-size: 11px;
+        }
+
+        .open-button {
+          border: 1px solid #393240;
+          background: transparent;
+          color: #aaa2b2;
+          padding: 8px 13px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+
+        .open-button:hover {
+          color: white;
+          border-color: #7040bd;
+        }
+
+        .more {
+          border: none;
+          background: transparent;
+          color: #77717f;
+          font-size: 20px;
+          cursor: pointer;
+        }
+
+        .empty {
+          text-align: center;
+          padding: 100px 20px;
+          border: 1px dashed #302b38;
+          border-radius: 15px;
+        }
+
+        .empty-icon {
+          font-size: 45px;
+          margin-bottom: 15px;
+        }
+
+        .empty h3 {
+          margin: 0 0 8px;
+        }
+
+        .empty p {
+          color: #77717f;
+          font-size: 13px;
+        }
+
+        @media (max-width: 700px) {
+
+          .header {
+            padding: 20px;
+            height: auto;
+            gap: 15px;
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .header-actions {
+            width: 100%;
+          }
+
+          .search {
+            flex: 1;
+          }
+
+          .content {
+            padding: 20px;
+          }
+
+          .open-button {
+            display: none;
+          }
+
+        }
+
+      `}</style>
+
     </div>
   );
-}
-
-/* -------------------------------- */
-/* Helpers                           */
-/* -------------------------------- */
-
-function getHistoryIcon(type: HistoryType) {
-  switch (type) {
-    case "chat":
-      return <MessageSquare className="h-4 w-4 text-blue-400" />;
-
-    case "code":
-      return <Code2 className="h-4 w-4 text-violet-400" />;
-
-    case "debug":
-      return <FileCode2 className="h-4 w-4 text-red-400" />;
-
-    case "explain":
-      return <Bot className="h-4 w-4 text-emerald-400" />;
-
-    default:
-      return <Bot className="h-4 w-4 text-zinc-400" />;
-  }
-}
-
-function getIconBackground(type: HistoryType) {
-  switch (type) {
-    case "chat":
-      return "bg-blue-500/10";
-
-    case "code":
-      return "bg-violet-500/10";
-
-    case "debug":
-      return "bg-red-500/10";
-
-    case "explain":
-      return "bg-emerald-500/10";
-
-    default:
-      return "bg-white/5";
-  }
-}
-
-function getBadgeStyle(type: HistoryType) {
-  switch (type) {
-    case "chat":
-      return "bg-blue-500/10 text-blue-300";
-
-    case "code":
-      return "bg-violet-500/10 text-violet-300";
-
-    case "debug":
-      return "bg-red-500/10 text-red-300";
-
-    case "explain":
-      return "bg-emerald-500/10 text-emerald-300";
-
-    default:
-      return "bg-white/5 text-zinc-400";
-  }
-}
-
-function getTypeName(type: HistoryType) {
-  switch (type) {
-    case "chat":
-      return "Chat";
-
-    case "code":
-      return "Code";
-
-    case "debug":
-      return "Debug";
-
-    case "explain":
-      return "Explain";
-
-    default:
-      return "Session";
-  }
 }

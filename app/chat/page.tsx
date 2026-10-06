@@ -1,365 +1,835 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import {
-  Bot,
-  Check,
-  Clipboard,
-  MessageSquare,
-  Plus,
-  Send,
-  Sparkles,
-  User,
-} from "lucide-react";
-
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
+import { useState } from "react";
 
 type Message = {
   id: number;
-  role: "user" | "assistant";
-  content: string;
+  role: "user" | "ai";
+  text: string;
 };
 
-const suggestions = [
-  "Explain this JavaScript function",
-  "Help me fix a React error",
-  "Create a REST API with FastAPI",
-  "How does async/await work?",
-];
+type Chat = {
+  id: number;
+  title: string;
+};
 
 export default function ChatPage() {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isSending, setIsSending] = useState(false);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [chats, setChats] = useState<Chat[]>([
+    { id: 1, title: "Build a React component" },
+    { id: 2, title: "Fix API connection" },
+    { id: 3, title: "Explain Java code" },
+    { id: 4, title: "DSA Array problem" },
+  ]);
 
-  const sendMessage = (text?: string) => {
-    const content = (text ?? message).trim();
+  const [activeChat, setActiveChat] = useState(1);
 
-    if (!content || isSending) return;
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      role: "ai",
+      text: "Hi! 👋 I'm DevPilot AI. How can I help you with your code today?",
+    },
+  ]);
+
+  const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  const filteredChats = chats.filter((chat) =>
+    chat.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
 
     const userMessage: Message = {
       id: Date.now(),
       role: "user",
-      content,
+      text: input,
     };
 
-    setMessages((previous) => [...previous, userMessage]);
-    setMessage("");
-    setIsSending(true);
+    setMessages((prev) => [...prev, userMessage]);
 
+    const currentInput = input;
+    setInput("");
+
+    // Temporary AI response
     setTimeout(() => {
-      const assistantMessage: Message = {
+      const aiMessage: Message = {
         id: Date.now() + 1,
-        role: "assistant",
-        content:
-          "I'm ready to help you with your code. This is currently a demo response. Once the DevPilot backend is connected, this message will come from your AI model.",
+        role: "ai",
+        text: `I received your request: "${currentInput}"\n\nYour AI response will appear here once your backend/API is connected.`,
       };
 
-      setMessages((previous) => [...previous, assistantMessage]);
-      setIsSending(false);
-    }, 1000);
+      setMessages((prev) => [...prev, aiMessage]);
+    }, 700);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    sendMessage();
+  const createNewChat = () => {
+    const newChat = {
+      id: Date.now(),
+      title: "New coding chat",
+    };
+
+    setChats((prev) => [newChat, ...prev]);
+    setActiveChat(newChat.id);
+
+    setMessages([
+      {
+        id: Date.now(),
+        role: "ai",
+        text: "New chat started! 🚀 What would you like to build?",
+      },
+    ]);
   };
 
-  const copyMessage = async (id: number, content: string) => {
-    await navigator.clipboard.writeText(content);
+  const selectChat = (id: number) => {
+    setActiveChat(id);
 
-    setCopiedId(id);
-
-    setTimeout(() => {
-      setCopiedId(null);
-    }, 2000);
-  };
-
-  const newChat = () => {
-    setMessages([]);
-    setMessage("");
-    setCopiedId(null);
+    setMessages([
+      {
+        id: Date.now(),
+        role: "ai",
+        text: "Welcome back! What would you like to continue working on?",
+      },
+    ]);
   };
 
   return (
-    <div className="min-h-screen bg-[#050507] text-white">
-      {/* Sidebar */}
-      <Sidebar
-        mobileOpen={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-      />
+    <div className="chat-page">
 
-      {/* Main */}
-      <main className="flex min-h-screen flex-col lg:ml-72">
-        {/* Header */}
-        <Header
-          title="AI Chat"
-          description="Ask DevPilot anything about programming"
-          onMenuClick={() => setMobileSidebarOpen(true)}
-        />
+      {/* ================= TOP BAR ================= */}
+      <header className="topbar">
 
-        {/* Chat Area */}
-        <div className="flex flex-1 flex-col">
-          {/* Top Actions */}
-          <div className="flex items-center justify-between border-b border-white/5 px-4 py-3 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
-                <Bot className="h-4 w-4 text-violet-400" />
+        <div className="brand">
+          <div className="brand-icon">&gt;_</div>
+
+          <div>
+            <h2>DevPilot AI</h2>
+            <span>AI Coding Assistant</span>
+          </div>
+        </div>
+
+        <div className="top-actions">
+
+          {/* Search */}
+          <div className="search-box">
+            <span>⌕</span>
+            <input
+              type="text"
+              placeholder="Search chats..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* New Chat */}
+          <button className="new-chat-top" onClick={createNewChat}>
+            <span>＋</span>
+            New Chat
+          </button>
+
+          {/* Status */}
+          <div className="status">
+            <span className="status-dot"></span>
+            AI Ready
+          </div>
+
+          {/* Profile */}
+          <div className="profile">
+            <div className="profile-avatar">V</div>
+            <span>Developer</span>
+            <span>⌄</span>
+          </div>
+
+        </div>
+      </header>
+
+      {/* ================= MAIN ================= */}
+      <div className="main-container">
+
+        {/* ================= SIDEBAR ================= */}
+        <aside className="sidebar">
+
+          <button className="new-chat-button" onClick={createNewChat}>
+            <span>＋</span>
+            New Chat
+          </button>
+
+          <div className="history-header">
+            <span>CHAT HISTORY</span>
+          </div>
+
+          <div className="chat-list">
+
+            {filteredChats.length === 0 ? (
+              <div className="no-chats">
+                No chats found
               </div>
+            ) : (
+              filteredChats.map((chat) => (
+                <button
+                  key={chat.id}
+                  className={`chat-item ${
+                    activeChat === chat.id ? "active" : ""
+                  }`}
+                  onClick={() => selectChat(chat.id)}
+                >
+                  <span className="chat-icon">▢</span>
+                  <span>{chat.title}</span>
+                </button>
+              ))
+            )}
+
+          </div>
+
+          {/* Sidebar bottom */}
+          <div className="sidebar-bottom">
+
+            <div className="ai-card">
+              <div className="ai-card-icon">✦</div>
 
               <div>
-                <p className="text-xs font-medium text-zinc-300">
-                  DevPilot AI
-                </p>
+                <strong>DevPilot AI</strong>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-
-                  <span className="text-[10px] text-zinc-600">
-                    Online
-                  </span>
+                <div className="ready-text">
+                  <span></span>
+                  Ready to assist
                 </div>
               </div>
+
             </div>
 
-            <button
-              onClick={newChat}
-              className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Chat
-            </button>
+            <p>
+              Generate, debug, explain and improve your code with AI.
+            </p>
+
+          </div>
+
+        </aside>
+
+        {/* ================= CHAT AREA ================= */}
+        <main className="chat-area">
+
+          {/* Chat Header */}
+          <div className="chat-header">
+
+            <div>
+              <h1>DevPilot AI</h1>
+              <p>Your intelligent coding assistant</p>
+            </div>
+
+            <div className="header-icons">
+              <button title="Search">⌕</button>
+              <button title="New Chat" onClick={createNewChat}>
+                ＋
+              </button>
+              <button title="More">•••</button>
+            </div>
+
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto">
-            {messages.length === 0 ? (
-              <EmptyChat onSuggestionClick={sendMessage} />
-            ) : (
-              <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
-                {messages.map((item) => (
-                  <MessageBubble
-                    key={item.id}
-                    message={item}
-                    copied={copiedId === item.id}
-                    onCopy={() =>
-                      copyMessage(item.id, item.content)
-                    }
-                  />
-                ))}
+          <div className="messages">
 
-                {isSending && <TypingIndicator />}
-              </div>
-            )}
-          </div>
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`message-row ${
+                  message.role === "user" ? "user-row" : "ai-row"
+                }`}
+              >
 
-          {/* Composer */}
-          <div className="border-t border-white/10 bg-[#050507] p-4 sm:p-6">
-            <form
-              onSubmit={handleSubmit}
-              className="mx-auto max-w-4xl"
-            >
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0f] transition focus-within:border-violet-500/30">
-                <textarea
-                  value={message}
-                  onChange={(event) =>
-                    setMessage(event.target.value)
-                  }
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !event.shiftKey
-                    ) {
-                      event.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  rows={3}
-                  placeholder="Ask DevPilot anything about your code..."
-                  className="w-full resize-none bg-transparent px-4 py-4 text-sm leading-6 text-zinc-300 outline-none placeholder:text-zinc-700"
-                />
+                {message.role === "ai" && (
+                  <div className="message-avatar ai-avatar">
+                    ✦
+                  </div>
+                )}
 
-                <div className="flex items-center justify-between border-t border-white/5 px-3 py-2.5">
-                  <p className="hidden text-[11px] text-zinc-700 sm:block">
-                    Press Enter to send · Shift + Enter for a new line
-                  </p>
-
-                  <span className="text-[10px] text-zinc-700 sm:hidden">
-                    Enter to send
-                  </span>
-
-                  <button
-                    type="submit"
-                    disabled={!message.trim() || isSending}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Send message"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
+                <div
+                  className={`message ${
+                    message.role === "user"
+                      ? "user-message"
+                      : "ai-message"
+                  }`}
+                >
+                  {message.text}
                 </div>
-              </div>
 
-              <p className="mt-3 text-center text-[10px] text-zinc-700">
-                DevPilot AI can make mistakes. Always review generated
-                code before using it.
-              </p>
-            </form>
+                {message.role === "user" && (
+                  <div className="message-avatar user-avatar">
+                    V
+                  </div>
+                )}
+
+              </div>
+            ))}
+
           </div>
-        </div>
-      </main>
-    </div>
-  );
-}
 
-/* -------------------------------- */
-/* Empty Chat                        */
-/* -------------------------------- */
+          {/* ================= INPUT ================= */}
+          <div className="input-section">
 
-function EmptyChat({
-  onSuggestionClick,
-}: {
-  onSuggestionClick: (text: string) => void;
-}) {
-  return (
-    <div className="flex min-h-[560px] flex-col items-center justify-center px-4 py-12 text-center">
-      {/* Icon */}
-      <div className="relative mb-6">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-violet-500/20 bg-violet-500/10">
-          <MessageSquare className="h-8 w-8 text-violet-400" />
-        </div>
+            <div className="input-box">
 
-        <div className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-[#050507] bg-violet-500">
-          <Sparkles className="h-3.5 w-3.5 text-white" />
-        </div>
-      </div>
+              <button className="attach-button" title="Attach file">
+                ＋
+              </button>
 
-      <h2 className="text-xl font-bold text-white sm:text-2xl">
-        How can I help you?
-      </h2>
+              <textarea
+                placeholder="Ask DevPilot AI anything about your code..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
 
-      <p className="mt-2 max-w-md text-sm leading-6 text-zinc-600">
-        Ask questions, debug errors, generate code, or learn a new
-        programming concept.
-      </p>
+              <button
+                className="send-button"
+                onClick={sendMessage}
+                disabled={!input.trim()}
+              >
+                ↑
+              </button>
 
-      {/* Suggestions */}
-      <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-        {suggestions.map((suggestion) => (
-          <button
-            key={suggestion}
-            onClick={() => onSuggestionClick(suggestion)}
-            className="group rounded-xl border border-white/10 bg-[#0b0b0f] p-4 text-left transition hover:border-violet-500/30 hover:bg-violet-500/[0.03]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 transition group-hover:bg-violet-500/10">
-                <Sparkles className="h-3.5 w-3.5 text-zinc-600 transition group-hover:text-violet-400" />
-              </div>
-
-              <span className="text-xs font-medium text-zinc-400 transition group-hover:text-zinc-200">
-                {suggestion}
-              </span>
             </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-/* -------------------------------- */
-/* Message Bubble                    */
-/* -------------------------------- */
+            <div className="input-hint">
+              Press <b>Enter</b> to send • <b>Shift + Enter</b> for new line
+            </div>
 
-function MessageBubble({
-  message,
-  copied,
-  onCopy,
-}: {
-  message: Message;
-  copied: boolean;
-  onCopy: () => void;
-}) {
-  const isUser = message.role === "user";
+          </div>
 
-  return (
-    <div
-      className={`flex gap-3 ${
-        isUser ? "justify-end" : "justify-start"
-      }`}
-    >
-      {!isUser && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/10">
-          <Bot className="h-4 w-4 text-violet-400" />
-        </div>
-      )}
+        </main>
 
-      <div
-        className={`max-w-[85%] sm:max-w-[75%] ${
-          isUser ? "order-first" : ""
-        }`}
-      >
-        <div
-          className={`rounded-2xl px-4 py-3 ${
-            isUser
-              ? "rounded-tr-md bg-violet-600 text-white"
-              : "rounded-tl-md border border-white/10 bg-[#0b0b0f] text-zinc-300"
-          }`}
-        >
-          <p className="whitespace-pre-wrap text-sm leading-6">
-            {message.content}
-          </p>
-        </div>
-
-        {!isUser && (
-          <button
-            onClick={onCopy}
-            className="mt-2 flex items-center gap-1.5 px-1 text-[10px] text-zinc-700 transition hover:text-zinc-400"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3 w-3 text-emerald-400" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Clipboard className="h-3 w-3" />
-                Copy
-              </>
-            )}
-          </button>
-        )}
       </div>
 
-      {isUser && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500">
-          <User className="h-4 w-4 text-white" />
-        </div>
-      )}
-    </div>
-  );
-}
+      {/* ================= STYLES ================= */}
+      <style jsx>{`
 
-/* -------------------------------- */
-/* Typing Indicator                  */
-/* -------------------------------- */
+        * {
+          box-sizing: border-box;
+        }
 
-function TypingIndicator() {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/10">
-        <Bot className="h-4 w-4 text-violet-400" />
-      </div>
+        .chat-page {
+          min-height: 100vh;
+          background: #08070b;
+          color: #f5f3ff;
+          font-family: Arial, Helvetica, sans-serif;
+          display: flex;
+          flex-direction: column;
+        }
 
-      <div className="rounded-2xl rounded-tl-md border border-white/10 bg-[#0b0b0f] px-5 py-4">
-        <div className="flex gap-1.5">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:150ms]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:300ms]" />
-        </div>
-      </div>
+        /* TOP BAR */
+
+        .topbar {
+          height: 76px;
+          border-bottom: 1px solid #25222d;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 28px;
+          background: #09080c;
+        }
+
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .brand-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 13px;
+          background: linear-gradient(
+            135deg,
+            #8b4dff,
+            #5f20ed
+          );
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 15px;
+          box-shadow: 0 0 25px rgba(123, 58, 237, 0.35);
+        }
+
+        .brand h2 {
+          margin: 0;
+          font-size: 18px;
+        }
+
+        .brand span {
+          color: #777281;
+          font-size: 12px;
+        }
+
+        .top-actions {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .search-box {
+          width: 220px;
+          height: 40px;
+          border: 1px solid #302c3a;
+          border-radius: 12px;
+          background: #111016;
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+          gap: 8px;
+        }
+
+        .search-box span {
+          font-size: 23px;
+          color: #918b9e;
+        }
+
+        .search-box input {
+          width: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: white;
+          font-size: 13px;
+        }
+
+        .search-box input::placeholder {
+          color: #6e6978;
+        }
+
+        .new-chat-top {
+          border: 1px solid #6735d8;
+          background: #20123c;
+          color: #c7a9ff;
+          padding: 10px 15px;
+          border-radius: 11px;
+          cursor: pointer;
+          font-weight: 600;
+        }
+
+        .new-chat-top:hover {
+          background: #2c1752;
+        }
+
+        .status {
+          border: 1px solid #482879;
+          background: #170d2c;
+          color: #c6a5ff;
+          padding: 10px 14px;
+          border-radius: 20px;
+          font-size: 13px;
+        }
+
+        .status-dot {
+          width: 7px;
+          height: 7px;
+          background: #45df93;
+          display: inline-block;
+          border-radius: 50%;
+          margin-right: 7px;
+        }
+
+        .profile {
+          height: 42px;
+          border: 1px solid #302c39;
+          border-radius: 12px;
+          padding: 5px 12px 5px 6px;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          font-size: 13px;
+        }
+
+        .profile-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          background: #7542ee;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+        }
+
+        /* MAIN */
+
+        .main-container {
+          flex: 1;
+          display: flex;
+          min-height: calc(100vh - 76px);
+        }
+
+        /* SIDEBAR */
+
+        .sidebar {
+          width: 270px;
+          border-right: 1px solid #25222d;
+          background: #0b0a0f;
+          padding: 20px 15px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .new-chat-button {
+          height: 45px;
+          border: none;
+          border-radius: 11px;
+          background: linear-gradient(
+            135deg,
+            #8c43ff,
+            #6a23e9
+          );
+          color: white;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-bottom: 25px;
+        }
+
+        .new-chat-button span {
+          font-size: 20px;
+          margin-right: 6px;
+        }
+
+        .history-header {
+          color: #686371;
+          font-size: 11px;
+          letter-spacing: 1.4px;
+          margin: 5px 8px 12px;
+        }
+
+        .chat-list {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          overflow-y: auto;
+        }
+
+        .chat-item {
+          border: none;
+          background: transparent;
+          color: #a49fac;
+          text-align: left;
+          border-radius: 9px;
+          padding: 11px 10px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          font-size: 13px;
+        }
+
+        .chat-item:hover {
+          background: #15121c;
+          color: white;
+        }
+
+        .chat-item.active {
+          background: #211338;
+          color: #c6a2ff;
+        }
+
+        .chat-icon {
+          color: #8c7e9f;
+        }
+
+        .no-chats {
+          color: #696471;
+          font-size: 13px;
+          padding: 15px 8px;
+        }
+
+        .sidebar-bottom {
+          margin-top: auto;
+          border-top: 1px solid #25222d;
+          padding-top: 18px;
+        }
+
+        .ai-card {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .ai-card-icon {
+          width: 35px;
+          height: 35px;
+          border-radius: 10px;
+          background: #201139;
+          color: #ad7cff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ai-card strong {
+          font-size: 13px;
+        }
+
+        .ready-text {
+          color: #6f6a78;
+          font-size: 10px;
+          margin-top: 4px;
+        }
+
+        .ready-text span {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          background: #42d991;
+          border-radius: 50%;
+          margin-right: 5px;
+        }
+
+        .sidebar-bottom p {
+          color: #696473;
+          font-size: 11px;
+          line-height: 1.6;
+        }
+
+        /* CHAT */
+
+        .chat-area {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+
+        .chat-header {
+          height: 76px;
+          border-bottom: 1px solid #25222d;
+          padding: 0 28px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .chat-header h1 {
+          margin: 0;
+          font-size: 19px;
+        }
+
+        .chat-header p {
+          margin: 5px 0 0;
+          color: #706b78;
+          font-size: 12px;
+        }
+
+        .header-icons {
+          display: flex;
+          gap: 8px;
+        }
+
+        .header-icons button {
+          width: 38px;
+          height: 38px;
+          border: 1px solid #302c38;
+          border-radius: 10px;
+          background: #111016;
+          color: #9b94a6;
+          cursor: pointer;
+          font-size: 17px;
+        }
+
+        .header-icons button:hover {
+          color: white;
+          border-color: #6940a6;
+        }
+
+        /* MESSAGES */
+
+        .messages {
+          flex: 1;
+          overflow-y: auto;
+          padding: 35px 8%;
+        }
+
+        .message-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          margin-bottom: 24px;
+          max-width: 900px;
+        }
+
+        .user-row {
+          margin-left: auto;
+          justify-content: flex-end;
+        }
+
+        .message {
+          max-width: 700px;
+          padding: 14px 17px;
+          border-radius: 14px;
+          white-space: pre-wrap;
+          line-height: 1.6;
+          font-size: 14px;
+        }
+
+        .ai-message {
+          background: #121017;
+          border: 1px solid #292531;
+          color: #ddd8e6;
+        }
+
+        .user-message {
+          background: linear-gradient(
+            135deg,
+            #7436e8,
+            #5722ba
+          );
+          color: white;
+        }
+
+        .message-avatar {
+          width: 34px;
+          height: 34px;
+          flex-shrink: 0;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: bold;
+        }
+
+        .ai-avatar {
+          background: #24113f;
+          color: #ad7bff;
+        }
+
+        .user-avatar {
+          background: #7140e7;
+          color: white;
+        }
+
+        /* INPUT */
+
+        .input-section {
+          padding: 15px 8% 25px;
+        }
+
+        .input-box {
+          min-height: 62px;
+          border: 1px solid #393240;
+          border-radius: 16px;
+          background: #111016;
+          display: flex;
+          align-items: flex-end;
+          padding: 10px;
+          box-shadow: 0 8px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .input-box:focus-within {
+          border-color: #7140c6;
+        }
+
+        .input-box textarea {
+          flex: 1;
+          resize: none;
+          min-height: 40px;
+          max-height: 150px;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: white;
+          font-size: 14px;
+          padding: 10px;
+          font-family: inherit;
+        }
+
+        .input-box textarea::placeholder {
+          color: #67616f;
+        }
+
+        .attach-button {
+          width: 40px;
+          height: 40px;
+          border: none;
+          background: transparent;
+          color: #8c8496;
+          font-size: 22px;
+          cursor: pointer;
+        }
+
+        .send-button {
+          width: 42px;
+          height: 42px;
+          border: none;
+          border-radius: 11px;
+          background: #7839ee;
+          color: white;
+          font-size: 22px;
+          cursor: pointer;
+        }
+
+        .send-button:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
+
+        .input-hint {
+          text-align: center;
+          color: #57525e;
+          font-size: 10px;
+          margin-top: 9px;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 900px) {
+
+          .sidebar {
+            width: 220px;
+          }
+
+          .search-box {
+            width: 160px;
+          }
+
+          .status {
+            display: none;
+          }
+
+        }
+
+        @media (max-width: 650px) {
+
+          .sidebar {
+            display: none;
+          }
+
+          .topbar {
+            padding: 0 15px;
+          }
+
+          .search-box {
+            display: none;
+          }
+
+          .profile span:not(.profile-avatar) {
+            display: none;
+          }
+
+          .messages {
+            padding: 25px 15px;
+          }
+
+          .input-section {
+            padding: 12px 15px 18px;
+          }
+
+        }
+
+      `}</style>
     </div>
   );
 }
